@@ -75,23 +75,15 @@
     <div id="calibration-message"></div>
 
     <script>
-        // 儲存伺服器時間與本地時間的偏移量 (毫秒)
-        // 這個偏移量將用於校正本地時間，使其與伺服器時間同步
-        let timeOffset = 0; 
-
         /**
          * @function updateTime
          * @description 更新時間顯示，每秒執行一次。
-         * 顯示的時間是基於本地時間加上校正後的偏移量。
          */
         function updateTime() {
-            // 獲取當前本地時間的毫秒數，並加上校正偏移量
-            const synchronizedTimestamp = Date.now() + timeOffset;
-            const synchronizedTime = new Date(synchronizedTimestamp);
-
-            let hours = synchronizedTime.getHours();
-            let minutes = synchronizedTime.getMinutes();
-            let seconds = synchronizedTime.getSeconds();
+            const now = new Date();
+            let hours = now.getHours();
+            let minutes = now.getMinutes();
+            let seconds = now.getSeconds();
 
             // 格式化時間，確保小時、分鐘、秒數都以兩位數顯示 (例如 01:05:09)
             hours = hours < 10 ? '0' + hours : hours;
@@ -121,59 +113,27 @@
 
         /**
          * @function startCalibration
-         * @description 啟動校正過程，顯示校正訊息，並從外部 API 獲取精確時間進行校正。
+         * @description 啟動校正過程，顯示校正訊息。
          */
-        async function startCalibration(attempts = 3, delay = 5000) {
+        function startCalibration() {
             const calibrationMessageElement = document.getElementById('calibration-message');
+
+            // 顯示校正中訊息
             calibrationMessageElement.textContent = '校正中...';
-            
-            // 嘗試多次請求，增加成功的機會
-            while (attempts > 0) {
-                try {
-                    // 從 WorldTimeAPI 獲取基於 IP 的時間資訊
-                    // 將 http:// 更改為 https:// 以避免混合內容錯誤
-                    // 添加 mode: 'cors' 確保 CORS 請求的正確處理
-                    const response = await fetch('https://worldtimeapi.org/api/ip', { mode: 'cors' });
-                    
-                    if (!response.ok) {
-                        // 如果響應狀態不是 2xx，則拋出錯誤
-                        const errorText = await response.text(); // 嘗試獲取響應體以提供更多資訊
-                        throw new Error(`HTTP error! Status: ${response.status} ${response.statusText}. Response body: ${errorText}`);
-                    }
-                    const data = await response.json();
-                    
-                    const serverUtcTime = new Date(data.utc_datetime);
-                    const localNow = new Date();
 
-                    // 計算伺服器時間與本地時間的差異 (偏移量)
-                    timeOffset = serverUtcTime.getTime() - localNow.getTime();
-                    // 在此簡化版本中，不再需要 lastCalibrationPerformanceTime
-                    // lastCalibrationPerformanceTime = performance.now(); 
+            // 模擬校正延遲
+            setTimeout(() => {
+                // 校正完成後顯示訊息
+                calibrationMessageElement.textContent = '校正完成';
 
-                    calibrationMessageElement.textContent = '校正完成';
-                    // 成功後立即返回，不再嘗試
-                    setTimeout(() => calibrationMessageElement.textContent = '', 2000);
-                    return; 
-                } catch (error) {
-                    console.error('時間校正失敗:', error);
-                    attempts--; // 減少嘗試次數
-                    if (attempts === 0) {
-                        // 如果所有嘗試都失敗了
-                        calibrationMessageElement.textContent = '校正失敗 (網路或安全策略問題)';
-                        timeOffset = 0; // 校正失敗，確保 timeOffset 歸零，讓時鐘回歸本地時間
-                        console.error('可能原因：網路連接問題，或瀏覽器/環境的安全策略 (CSP) 阻止了對外部 API 的請求。');
-                        console.error('請確保您的網路連接正常，並且如果是在受限環境中運行，該環境允許對 worldtimeapi.org 的 HTTPS 請求。');
-                    } else {
-                        // 等待一段時間後再重試
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    }
-                }
-            }
-            // 如果所有嘗試都失敗，且訊息尚未清除，則在最後清除它
-            setTimeout(() => calibrationMessageElement.textContent = '', 2000);
+                // 在一段時間後清除訊息
+                setTimeout(() => {
+                    calibrationMessageElement.textContent = '';
+                }, 2000); // 訊息顯示 2 秒後清除
+            }, 1500); // 模擬校正過程 1.5 秒
         }
 
-        // 設定定時器：每秒更新一次時間顯示
+        // 設定定時器：每秒更新一次時間
         setInterval(updateTime, 1000);
 
         // 設定定時器：每 10 秒移動一次時間顯示，啟動螢幕保護功能
@@ -186,9 +146,6 @@
         updateTime();
         applyScreenProtection();
         document.getElementById('calibration-message').textContent = ''; // 確保初始是空的
-
-        // 頁面載入後立即執行一次校正
-        startCalibration();
     </script>
 </body>
 </html>
