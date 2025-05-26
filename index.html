@@ -7,8 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Lobster&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-
     <meta name="apple-mobile-web-app-capable" content="yes"> <meta name="mobile-web-app-capable" content="yes"> <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"> <meta name="apple-mobile-web-app-title" content="iPhone 時鐘"> <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/Benson-WU980419/ClockWebsite_TWtime/refs/heads/main/clockwebsite_twtime_icon.png">
     <link rel="icon" href="https://raw.githubusercontent.com/Benson-WU980419/ClockWebsite_TWtime/refs/heads/main/clockwebsite_twtime_icon.png" type="image/png">
 
@@ -69,126 +67,30 @@
             min-height: 1em; /* 確保即使沒有內容也佔據空間，避免佈局跳動 */
         }
 
-        /* 電量資訊容器樣式 */
-        #battery-container {
-            position: absolute; /* 使用絕對定位 */
-            bottom: 5vh; /* 距離底部 5% 視口高度 */
-            right: 5vw; /* 距離右側 5% 視口寬度 */
-            display: flex; /* 使用 Flexbox 讓圖示和文字水平排列 */
-            align-items: center; /* 垂直居中 */
-            font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; /* 使用微軟正黑體 */
-            font-size: 3.5vw; /* 字體大小 */
-            color: #FFF; /* 電量文字顏色改為白色 */
-            /* 針對 iOS 設備的安全區域 */
-            padding-right: env(safe-area-inset-right); 
-            padding-left: env(safe-area-inset-left);
-            z-index: 10; /* 確保在其他內容之上 */
-            /* 讓電池容器在載入時有一個淡入效果 */
-            opacity: 0;
-            animation: fadeIn 1s ease-out forwards;
-            animation-delay: 0.5s; /* 延遲一點點，讓其他內容先載入 */
-        }
-
         /* 淡入動畫 */
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
-        }
-
-        /* Font Awesome 電池圖標的包裝容器 */
-        #battery-icon-wrapper {
-            position: relative; /* 讓內部元素可以絕對定位 */
-            width: 8vw; /* 控制整體電池圖標的寬度 */
-            height: 3.5vw; /* 控制整體電池圖標的高度 */
-            display: flex; /* 使用 flexbox 讓圖標本身居中 */
-            justify-content: center;
-            align-items: center;
-            margin-right: 0.5vw; /* 圖示與文字的間距 */
-            overflow: hidden; /* 防止閃電溢出 */
-        }
-
-        /* Font Awesome 電池圖標本身的樣式 */
-        #fa-battery {
-            font-size: 4vw; /* 電池圖標的字體大小，控制其尺寸 */
-            transition: color 0.5s ease-out; /* 顏色過渡動畫 */
-            line-height: 1; /* 確保圖標行高緊湊 */
-        }
-
-        /* Font Awesome 閃電圖標的樣式 (疊加在電池圖標上方) */
-        #charging-icon {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%); /* 精確居中 */
-            font-size: 4vw; /* 閃電圖標的字體大小，使其更明顯 */
-            color: #FFF; /* 白色閃電 */
-            display: none; /* 預設隱藏 */
-            z-index: 2; /* 確保在電池圖標上方 */
-            animation: flashPulse 1s infinite alternate; /* 閃爍動畫 */
-        }
-
-        /* 閃電圖標的閃爍動畫 */
-        @keyframes flashPulse {
-            from { opacity: 1; }
-            to { opacity: 0.7; } 
-        }
-
-        /* 電量文字 */
-        #battery-text {
-            color: #FFF; /* 電量文字預設為白色 */
-        }
-        /* 電量過低時的文字顏色 */
-        #battery-text.low-battery-text {
-            color: #FF3B30; /* 紅色 */
-        }
-
-        /* 新增：電量文字閃爍動畫 */
-        @keyframes blink {
-            0% { opacity: 1; }
-            50% { opacity: 0.2; } /* 讓它淡出得更明顯 */
-            100% { opacity: 1; }
-        }
-
-        #battery-text.low-battery-blink { /* 新增的 class，用於低電量時文字閃爍 */
-            animation: blink 1s infinite; /* 1 秒無限次閃爍 */
         }
     </style>
 </head>
 <body>
     <div id="time"></div>
     
-    <div id="calibration-message"></div> <div id="battery-container">
-        <div id="battery-icon-wrapper">
-            <i id="fa-battery" class="fa-solid"></i> 
-            
-            <i id="charging-icon" class="fa-solid fa-bolt"></i>
-        </div>
-        
-        <div id="battery-text"></div>
-    </div>
-
-    <script>
+    <div id="calibration-message"></div> <script>
         /**
          * @class Clock
-         * @description 管理時鐘的顯示、螢幕保護、時間計算邏輯，並新增圖形化電量顯示功能。
+         * @description 管理時鐘的顯示、螢幕保護、時間計算邏輯。
          * 此版本僅使用本地裝置時間，並強制顯示為台灣時區 (UTC+8)。
          */
         class Clock {
             /**
              * @constructor
              * @param {string} timeElementId - 顯示時間的 DOM 元素 ID。
-             * @param {string} batteryContainerId - 顯示電量資訊的整體容器 ID。
-             * @param {string} faBatteryIconId - Font Awesome 電池圖標的 DOM 元素 ID (例如 'fa-battery')。
-             * @param {string} chargingIconId - 充電閃電圖示的 DOM 元素 ID。
-             * @param {string} batteryTextId - 電量文字的 DOM 元素 ID。
              * @param {string} messageElementId - 顯示校正訊息的 DOM 元素 ID。
              */
-            constructor(timeElementId, batteryContainerId, faBatteryIconId, chargingIconId, batteryTextId, messageElementId) {
+            constructor(timeElementId, messageElementId) {
                 this.timeElement = document.getElementById(timeElementId);
-                this.batteryContainer = document.getElementById(batteryContainerId); 
-                this.faBatteryIcon = document.getElementById(faBatteryIconId); // Font Awesome 電池圖標的 <i> 元素
-                this.chargingIconElement = document.getElementById(chargingIconId); 
-                this.batteryTextElement = document.getElementById(batteryTextId); 
                 this.messageElement = document.getElementById(messageElementId);
 
                 // 預設調快一秒的固定偏移量 (毫秒)
@@ -200,9 +102,6 @@
                 // 儲存預設訊息顏色
                 this.defaultMessageColor = 'rgba(255, 255, 255, 0.6)';
                 this._messageTimeout = null; // 用於儲存訊息自動清除的 setTimeout ID
-
-                this.battery = null; // 用於儲存 BatteryManager 物件
-                this._batteryListenersSet = false; // 標誌，確保事件監聽器只設定一次
             }
 
             /**
@@ -241,55 +140,6 @@
 
             /**
              * @private
-             * @method _applyBatteryState
-             * @description 根據電量水平和充電狀態，更新 Font Awesome 電池圖標的樣式和顏色。
-             * @param {number} level - 電量百分比 (0-100)。
-             * @param {boolean} charging - 是否正在充電。
-             */
-            _applyBatteryState(level, charging) {
-                // 重置所有潛在的狀態，確保每次呼叫時都是乾淨的起點
-                this.faBatteryIcon.className = 'fa-solid'; // 清除所有電量相關的 class
-                this.faBatteryIcon.style.color = ''; // 清除舊的顏色設定
-                this.faBatteryIcon.style.display = 'none'; // 預設隱藏電池圖標，除非需要顯示
-                this.chargingIconElement.style.display = 'none'; // 預設隱藏閃電圖標
-                this.chargingIconElement.style.animation = 'none'; // 停止閃電動畫
-                this.batteryTextElement.classList.remove('low-battery-text', 'low-battery-blink'); // 移除低電量文字樣式和閃爍效果
-                this.batteryTextElement.style.color = '#FFF'; // 電量文字預設為白色
-
-                if (charging) {
-                    // 情況 1：充電中 (只顯示閃電圖示，不顯示電池圖示)
-                    this.chargingIconElement.style.display = 'block'; // 顯示閃電圖標
-                    this.chargingIconElement.style.animation = 'flashPulse 1s infinite alternate'; // 閃電開始閃爍動畫
-                    // 電量文字保持預設的白色
-                } else {
-                    // 情況 2：非充電狀態
-                    if (level <= 20) {
-                        // 情況 2.1：低電量 (只顯示紅色數字並閃爍，不顯示電池圖示)
-                        this.batteryTextElement.classList.add('low-battery-text'); // 電量文字變紅色 (CSS 定義)
-                        this.batteryTextElement.classList.add('low-battery-blink'); // 電量文字開始閃爍 (CSS 定義)
-                        // 電池圖標和閃電圖標已經在開頭被隱藏
-                    } else {
-                        // 情況 2.2：正常電量 (顯示電池圖示，電量文字保持白色)
-                        this.faBatteryIcon.style.display = 'block'; // 顯示電池圖標
-                        
-                        // 根據電量應用不同的電池圖標和顏色
-                        if (level <= 60) {
-                            this.faBatteryIcon.classList.add('fa-battery-half');
-                            this.faBatteryIcon.style.color = '#FFD200'; // 黃色
-                        } else if (level <= 85) {
-                            this.faBatteryIcon.classList.add('fa-battery-three-quarters');
-                            this.faBatteryIcon.style.color = '#34C759'; // 綠色
-                        } else {
-                            this.faBatteryIcon.classList.add('fa-battery-full');
-                            this.faBatteryIcon.style.color = '#34C759'; // 綠色
-                        }
-                        // 電量文字保持預設的白色
-                    }
-                }
-            }
-
-            /**
-             * @private
              * @method _displayTemporaryMessage
              * @description 在訊息區塊顯示短暫的提示訊息。
              * @param {string} message - 要顯示的文字訊息。
@@ -313,81 +163,13 @@
             }
 
             /**
-             * @method updateBatteryInfo
-             * @description 獲取並更新設備的電池資訊 (Font Awesome 圖標)。
-             * 顯示電量百分比和充電狀態，並動態調整電池圖示。
-             * 此函數不負責設定監聽器，監聽器由 startupBatteryAnimation 設定。
-             */
-            async updateBatteryInfo() {
-                // 只有當瀏覽器支援電池 API 且電池物件已獲取時才執行
-                if ('getBattery' in navigator && this.battery) {
-                    try {
-                        const level = (this.battery.level * 100); // 電量百分比 (0-100)
-                        const charging = this.battery.charging; // 是否正在充電 (true/false)
-
-                        this.batteryTextElement.textContent = `${level.toFixed(0)}%`; // 電量文字保留整數
-                        this._applyBatteryState(level, charging); // 應用電池圖標和顏色狀態
-
-                    } catch (error) {
-                        console.error('無法獲取電池資訊:', error);
-                        // 在訊息區塊顯示錯誤訊息，然後隱藏電池容器
-                        this._displayTemporaryMessage('無法獲取電池資訊', '#FF3B30'); // 紅色
-                        this.batteryContainer.style.display = 'none';
-                    }
-                } else if (!('getBattery' in navigator)) {
-                    // 瀏覽器不支援電池 API
-                    this._displayTemporaryMessage('無法獲取電池資訊', '#FF3B30'); // 紅色
-                    this.batteryContainer.style.display = 'none'; // 隱藏整個電量容器
-                }
-                // 此處不設定監聽器，監聽器在 startupBatteryAnimation 中一次性設定
-            }
-
-            /**
-             * @method startupBatteryAnimation
-             * @description 在頁面載入時初始化電池顯示狀態並設定監聽器。
-             * 不再執行動畫，直接顯示當前電池狀態。
-             */
-            async startupBatteryAnimation() {
-                if (!('getBattery' in navigator)) {
-                    // 如果瀏覽器不支援電池 API，顯示通知並隱藏電池容器
-                    this._displayTemporaryMessage('無法獲取電池資訊', '#FF3B30'); // 紅色
-                    this.batteryContainer.style.display = 'none';
-                    return;
-                }
-
-                try {
-                    this.battery = await navigator.getBattery(); // 獲取電池物件
-                    const targetLevel = (this.battery.level * 100);
-                    const targetCharging = this.battery.charging;
-
-                    this.batteryTextElement.textContent = `${targetLevel.toFixed(0)}%`; // 設定初始電量百分比文字
-
-                    // 直接應用初始電池狀態 (根據新規則)
-                    this._applyBatteryState(targetLevel, targetCharging);
-
-                    // 設定電池事件監聽器 (只設定一次)
-                    if (!this._batteryListenersSet) {
-                        this.battery.onchargingchange = () => this.updateBatteryInfo();
-                        this.battery.onlevelchange = () => this.updateBatteryInfo();
-                        this._batteryListenersSet = true;
-                    }
-
-                } catch (error) {
-                    console.error('電池啟動失敗:', error);
-                    this._displayTemporaryMessage('無法獲取電池資訊', '#FF3B30');
-                    this.batteryContainer.style.display = 'none';
-                }
-            }
-
-            /**
              * @method init
-             * @description 初始化時鐘功能，設定所有定時器和電量顯示。
+             * @description 初始化時鐘功能，設定所有定時器。
              * 此版本不進行線上校準，僅顯示本地台灣時間。
              */
             init() {
                 this.updateTime();
                 this.applyScreenProtection();
-                this.startupBatteryAnimation(); // 在初始化時呼叫啟動電池顯示
 
                 // 初次顯示校正訊息
                 this._displayTemporaryMessage('已校正為臺灣時間', 'yellowgreen');
@@ -401,10 +183,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             const myClock = new Clock(
                 'time', 
-                'battery-container', 
-                'fa-battery', 
-                'charging-icon', 
-                'battery-text', 
                 'calibration-message'
             );
             myClock.init();
