@@ -45,17 +45,25 @@
       color: rgba(255, 255, 255, 0.6);
       margin-top: 3vh;
       text-align: center;
+      opacity: 1;
+      transition: opacity 1s ease;
+    }
+
+    #message.hidden {
+      opacity: 0;
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <div id="time"></div>
-  <div id="message">以本地時間為準</div>
+  <div id="message">此時間以本地時間校準</div>
 
   <script>
     class LocalClock {
-      constructor(timeId) {
+      constructor(timeId, messageId) {
         this.timeElement = document.getElementById(timeId);
+        this.messageElement = document.getElementById(messageId);
       }
 
       applyAntiBurnIn() {
@@ -75,15 +83,24 @@
         setTimeout(() => this.updateTime(), delay);
       }
 
+      showTemporaryMessage(text, duration = 5000) {
+        this.messageElement.textContent = text;
+        this.messageElement.classList.remove("hidden");
+        setTimeout(() => {
+          this.messageElement.classList.add("hidden");
+        }, duration);
+      }
+
       init() {
         this.updateTime();
         this.applyAntiBurnIn();
         setInterval(() => this.applyAntiBurnIn(), 10000);
+        this.showTemporaryMessage("此時間以本地時間校準");
       }
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-      const clock = new LocalClock("time");
+      const clock = new LocalClock("time", "message");
       clock.init();
     });
   </script>
