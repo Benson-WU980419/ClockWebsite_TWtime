@@ -37,11 +37,11 @@
 
         /* 時間顯示區塊樣式 */
         #time {
-            /* 字體大小根據視口寬度自動調整，確保不超出螢幕且不換行 */
-            font-size: 15vw; 
+            /* 調整字體大小，確保不超出螢幕且不換行 */
+            font-size: 15vw; /* 略微縮小字體，以適應輝光管風格和確保不換行 */
             text-align: center; /* 文字居中 */
-            /* 調整字體間距以適應 Major Mono Display 的風格 */
-            letter-spacing: -0.05em; 
+            /* 調整字體間距以適應 Major Mono Display 的風格，通常等寬字體間距較小 */
+            letter-spacing: -0.05em; /* 負值間距讓字元更緊湊，適合 Major Mono Display */
             
             /* 輝光管風格顏色和發光效果 */
             color: #FF8C00; /* 輝光管的橙紅色 */
@@ -76,195 +76,81 @@
 
     <script>
         /**
-         * @class Clock
-         * @description 管理時鐘的顯示、螢幕保護、時間校準和自動微調邏輯。
+         * @function updateTime
+         * @description 更新時間顯示，每秒執行一次。
+         * 顯示的時間將預設調快一秒鐘。
          */
-        class Clock {
-            /**
-             * @constructor
-             * @param {string} timeElementId - 顯示時間的 DOM 元素 ID。
-             * @param {string} messageElementId - 顯示校正訊息的 DOM 元素 ID。
-             */
-            constructor(timeElementId, messageElementId) {
-                this.timeElement = document.getElementById(timeElementId);
-                this.messageElement = document.getElementById(messageElementId);
+        function updateTime() {
+            const now = new Date();
+            // 將時間調快一秒鐘 (1000 毫秒)
+            now.setSeconds(now.getSeconds()); 
 
-                // 儲存伺服器時間與本地時間的偏移量 (毫秒)
-                // 初始為 0，表示使用本地時間。校準後會更新。
-                this.timeOffset = 0; 
-                // 動態調整時鐘運行速度的變數 (毫秒/秒)
-                // 正值會讓時鐘加速，負值會讓時鐘減速。
-                this.currentRateAdjustment = 0; 
-                // 用於追蹤上次 updateTime 執行時的時間，以便計算經過的時間
-                this.lastUpdateTime = Date.now(); 
-                // 預設調快一秒的固定偏移量 (毫秒)
-                this.desiredInitialFastForward = 1000; 
+            let hours = now.getHours();
+            let minutes = now.getMinutes();
+            let seconds = now.getSeconds();
 
-                // 校準相關參數
-                // 使用 worldtimeapi.org 作為時間 API
-                this.timeApiUrl = 'https://worldtimeapi.org/api/ip'; 
-                this.calibrationAttempts = 3; // 校準重試次數
-                this.calibrationDelay = 5000; // 校準重試間隔 (毫秒)
-                this.calibrationIntervalSeconds = 60; // 校準間隔 (秒)
-                this.adjustmentFactor = 0.9; // 調整因子 (0 到 1 之間)，決定每次調整的激進程度。提高以更積極。
-                this.maxRateAdjustment = 100; // 限制速率調整的最大範圍 (毫秒/秒)
-            }
+            // 格式化時間，確保小時、分鐘、秒數都以兩位數顯示 (例如 01:05:09)
+            hours = hours < 10 ? '0' + hours : hours;
+            minutes = minutes < 10 ? '0' + minutes : minutes;
+            seconds = seconds < 10 ? '0' + seconds : seconds;
 
-            /**
-             * @method updateTime
-             * @description 更新時間顯示，每秒執行一次。
-             * 顯示的時間是基於本地時間加上校正後的偏移量，並根據自動微調加速。
-             */
-            updateTime() {
-                const now = Date.now();
-                // 計算自上次更新以來經過的時間 (毫秒)
-                const elapsedTime = now - this.lastUpdateTime; 
-                this.lastUpdateTime = now; // 更新上次更新時間
-
-                // 根據 currentRateAdjustment (毫秒/秒) 和經過的時間，調整 timeOffset
-                // 這會讓時鐘的運行速度根據校準結果動態調整
-                this.timeOffset += (this.currentRateAdjustment * (elapsedTime / 1000));
-
-                // 獲取當前本地時間的毫秒數，並加上校正偏移量
-                // desiredInitialFastForward 已經在校準時加入到 timeOffset 中
-                let synchronizedTimestamp = now + this.timeOffset; 
-                
-                const synchronizedTime = new Date(synchronizedTimestamp);
-
-                let hours = synchronizedTime.getHours();
-                let minutes = synchronizedTime.getMinutes();
-                let seconds = synchronizedTime.getSeconds();
-
-                // 格式化時間，確保小時、分鐘、秒數都以兩位數顯示 (例如 01:05:09)
-                hours = hours < 10 ? '0' + hours : hours;
-                minutes = minutes < 10 ? '0' + minutes : minutes;
-                seconds = seconds < 10 ? '0' + seconds : seconds;
-
-                // 將格式化後的時間顯示在頁面上，使用全形冒號
-                this.timeElement.textContent = `${hours}：${minutes}：${seconds}`;
-
-                // 在控制台輸出調整數值，以便觀察 (可取消註釋)
-                // console.log(`[UpdateTime] Elapsed: ${elapsedTime}ms, Rate Adj: ${this.currentRateAdjustment.toFixed(3)}ms/s, TimeOffset: ${this.timeOffset.toFixed(2)}ms, Synced Time: ${synchronizedTime.toLocaleTimeString()}`);
-            }
-
-            /**
-             * @method applyScreenProtection
-             * @description 輕微移動時間顯示的位置，以防止螢幕燒屏。
-             */
-            applyScreenProtection() {
-                // 生成一個小範圍的隨機偏移量，例如在 -1.5vw 到 +1.5vw 之間
-                const offsetX = (Math.random() * 2 - 1) * 1.5; // 隨機生成 -1.5 到 +1.5 之間的 vw 偏移量
-                const offsetY = (Math.random() * 2 - 1) * 1.5; // 隨機生成 -1.5 到 +1.5 之間的 vh 偏移量
-
-                // 將計算出的偏移量應用到時間元素的 transform 屬性上
-                this.timeElement.style.transform = `translate(${offsetX}vw, ${offsetY}vh)`;
-            }
-
-            /**
-             * @method startCalibration
-             * @description 啟動校正過程，顯示校正訊息，並從外部 API 獲取精確時間進行校正。
-             * 包含重試機制和詳細錯誤回饋。
-             * **新增自動微調邏輯：根據新的時間偏移量調整時鐘速率。**
-             */
-            async startCalibration() {
-                this.messageElement.textContent = '正在與外部時間校正...'; // 顯示校正中訊息
-                
-                let attemptsLeft = this.calibrationAttempts;
-                while (attemptsLeft > 0) {
-                    try {
-                        // 從 WorldTimeAPI 獲取基於 IP 的時間資訊
-                        const response = await fetch(this.timeApiUrl, { mode: 'cors' });
-                        
-                        if (!response.ok) {
-                            // 如果響應狀態不是 2xx，則拋出錯誤
-                            const errorText = await response.text(); 
-                            throw new Error(`HTTP error! Status: ${response.status} ${response.statusText}. Response body: ${errorText}`);
-                        }
-                        const data = await response.json();
-                        
-                        // worldtimeapi.org 的 UTC 時間在 utc_datetime 欄位
-                        const serverUtcTime = new Date(data.utc_datetime);
-                        const localNow = new Date();
-
-                        // 計算伺服器時間與本地時間的差異 (實際的瞬間偏差)
-                        const actualTimeDifference = serverUtcTime.getTime() - localNow.getTime(); 
-                        
-                        // 將「預設調快一秒」的偏移量加入到 timeOffset 中
-                        // timeOffset 現在代表了 (伺服器時間 - 本地時間) + 預設加速
-                        this.timeOffset = actualTimeDifference + this.desiredInitialFastForward;
-
-                        // --- 自動微調邏輯 ---
-                        // 目標：讓時鐘的運行速度更精確地趨近於外部時間。
-                        // desiredRateAdjustment 應該基於實際的偏差 (actualTimeDifference) 來計算。
-                        // 如果 actualTimeDifference 是正值，表示我們的時鐘比外部時間慢了這麼多毫秒。
-                        // 我們需要在下一個校準間隔內，將時鐘加速這麼多。
-                        const desiredRateAdjustment = actualTimeDifference / this.calibrationIntervalSeconds;
-
-                        // 逐步調整 currentRateAdjustment 趨近於 desiredRateAdjustment
-                        this.currentRateAdjustment = (this.currentRateAdjustment * (1 - this.adjustmentFactor)) + (desiredRateAdjustment * this.adjustmentFactor);
-
-                        // 限制速率調整的範圍，防止出現極端值
-                        this.currentRateAdjustment = Math.max(-this.maxRateAdjustment, Math.min(this.maxRateAdjustment, this.currentRateAdjustment)); 
-                        
-                        console.log(`[Calibration Success] 實際時間差異: ${actualTimeDifference}ms`);
-                        console.log(`[Calibration Success] 校準後總時間偏移量 (含預設加速): ${this.timeOffset}ms`);
-                        console.log(`[Calibration Success] 新速率調整: ${this.currentRateAdjustment.toFixed(3)}ms/s`);
-                        // --- 自動微調邏輯結束 ---
-
-                        this.messageElement.textContent = '校正完成'; // 校正成功訊息
-                        setTimeout(() => this.messageElement.textContent = '', 2000);
-                        return; // 校準成功，退出迴圈
-                    } catch (error) {
-                        console.error('時間校正失敗:', error);
-                        attemptsLeft--; // 減少嘗試次數
-
-                        if (attemptsLeft === 0) {
-                            // 如果所有嘗試都失敗了
-                            this.messageElement.textContent = '校正失敗 (網路或安全策略問題)'; // 顯示最終失敗訊息
-                            // 校正失敗，timeOffset 回歸僅預設調快一秒的本地時間
-                            this.timeOffset = this.desiredInitialFastForward; 
-                            this.currentRateAdjustment = 0; // 同時重置速率調整，避免累積錯誤
-                            console.error('可能原因：網路連接問題，或瀏覽器/環境的安全策略 (CSP) 阻止了對外部 API 的請求。');
-                            console.error('請確保您的網路連接正常，並且如果是在受限環境中運行，該環境允許對 worldtimeapi.org 的 HTTPS 請求。');
-                        } else {
-                            // 等待一段時間後再重試
-                            await new Promise(resolve => setTimeout(resolve, this.calibrationDelay));
-                        }
-                    }
-                }
-                // 如果所有嘗試都失敗，且訊息尚未清除，則在最後清除它
-                setTimeout(() => this.messageElement.textContent = '', 2000);
-            }
-
-            /**
-             * @method init
-             * @description 初始化時鐘功能，設定所有定時器。
-             */
-            init() {
-                // 頁面載入時，立即更新一次時間、應用一次螢幕保護，並在首次校正前清空訊息
-                this.updateTime();
-                this.applyScreenProtection();
-                this.messageElement.textContent = ''; // 確保初始是空的
-
-                // 設定定時器：每秒更新一次時間顯示
-                setInterval(() => this.updateTime(), 1000);
-
-                // 設定定時器：每 10 秒移動一次時間顯示，啟動螢幕保護功能
-                setInterval(() => this.applyScreenProtection(), 10000); // 10000 毫秒 = 10 秒
-
-                // 設定定時器：每 60 秒 (1 分鐘) 啟動一次校正
-                setInterval(() => this.startCalibration(), this.calibrationIntervalSeconds * 1000); 
-
-                // 頁面載入後立即執行一次校正
-                this.startCalibration();
-            }
+            // 將格式化後的時間顯示在頁面上，使用全形冒號
+            document.getElementById('time').textContent = `${hours}：${minutes}：${seconds}`;
         }
 
-        // 頁面載入完成後，實例化 Clock 類別並初始化
-        document.addEventListener('DOMContentLoaded', () => {
-            const myClock = new Clock('time', 'calibration-message');
-            myClock.init();
-        });
+        /**
+         * @function applyScreenProtection
+         * @description 輕微移動時間顯示的位置，以防止螢幕燒屏。
+         * 此函數僅針對 #time 元素應用 transform 屬性，校正訊息 (#calibration-message) 不會移動。
+         * 使用 CSS transform 屬性進行位移，並結合 transition 實現平滑移動。
+         */
+        function applyScreenProtection() {
+            const timeElement = document.getElementById('time');
+            // 生成一個小範圍的隨機偏移量，例如在 -1.5vw 到 +1.5vw 之間
+            // vw (viewport width) 和 vh (viewport height) 確保移動量與螢幕大小成比例
+            const offsetX = (Math.random() * 2 - 1) * 1.5; // 隨機生成 -1.5 到 +1.5 之間的 vw 偏移量
+            const offsetY = (Math.random() * 2 - 1) * 1.5; // 隨機生成 -1.5 到 +1.5 之間的 vh 偏移量
+
+            // 將計算出的偏移量應用到時間元素的 transform 屬性上
+            timeElement.style.transform = `translate(${offsetX}vw, ${offsetY}vh)`;
+        }
+
+        /**
+         * @function startCalibration
+         * @description 啟動校正過程，顯示校正訊息。
+         * 這個版本與本地時間同步，不進行外部 API 請求。
+         */
+        function startCalibration() {
+            const calibrationMessageElement = document.getElementById('calibration-message');
+
+            // 顯示校正中訊息，明確指出是與本地時間校正
+            calibrationMessageElement.textContent = '正在與本地時間校正...';
+
+            // 模擬校正延遲
+            setTimeout(() => {
+                // 校正完成後顯示訊息
+                calibrationMessageElement.textContent = '校正完成';
+
+                // 在一段時間後清除訊息
+                setTimeout(() => {
+                    calibrationMessageElement.textContent = '';
+                }, 2000); // 訊息顯示 2 秒後清除
+            }, 1500); // 模擬校正過程 1.5 秒
+        }
+
+        // 設定定時器：每秒更新一次時間
+        setInterval(updateTime, 1000);
+
+        // 設定定時器：每 10 秒移動一次時間顯示，啟動螢幕保護功能
+        setInterval(applyScreenProtection, 10000); // 10000 毫秒 = 10 秒
+
+        // 設定定時器：每 60 秒啟動一次校正
+        setInterval(startCalibration, 60000); // 60000 毫秒 = 60 秒
+
+        // 頁面載入時，立即更新一次時間、應用一次螢幕保護，並在首次校正前清空訊息
+        updateTime();
+        applyScreenProtection();
+        document.getElementById('calibration-message').textContent = ''; // 確保初始是空的
     </script>
 </body>
 </html>
