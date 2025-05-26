@@ -5,14 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>iPhone 時鐘</title>
   <link href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&display=swap" rel="stylesheet">
-  
-  <!-- PWA & ICON 支援 -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="時鐘">
-  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/Benson-WU980419/ClockWebsite_TWtime/main/clockwebsite_twtime_icon.png">
-  <link rel="icon" href="https://raw.githubusercontent.com/Benson-WU980419/ClockWebsite_TWtime/main/clockwebsite_twtime_icon.png" type="image/png">
 
   <style>
     body {
@@ -49,9 +41,9 @@
       transition: opacity 1s ease;
     }
 
-    #message.hidden {
+    /* 消失時用的 class */
+    .fade-out {
       opacity: 0;
-      pointer-events: none;
     }
   </style>
 </head>
@@ -60,10 +52,13 @@
   <div id="message">此時間以本地時間校準</div>
 
   <script>
-    class LocalClock {
+    class NTPClock {
       constructor(timeId, messageId) {
         this.timeElement = document.getElementById(timeId);
         this.messageElement = document.getElementById(messageId);
+        this.defaultOffset = 8 * 60 * 60 * 1000;
+        this.offset = parseInt(localStorage.getItem('tz_offset')) || this.defaultOffset;
+        this.ntpDelta = 0;
       }
 
       applyAntiBurnIn() {
@@ -73,34 +68,46 @@
       }
 
       updateTime() {
-        const date = new Date();
-        const hh = date.getHours().toString().padStart(2, '0');
-        const mm = date.getMinutes().toString().padStart(2, '0');
-        const ss = date.getSeconds().toString().padStart(2, '0');
+        const now = Date.now() + this.ntpDelta + this.offset;
+        const date = new Date(now);
+
+        const hh = date.getUTCHours().toString().padStart(2, '0');
+        const mm = date.getUTCMinutes().toString().padStart(2, '0');
+        const ss = date.getUTCSeconds().toString().padStart(2, '0');
+
         this.timeElement.textContent = `${hh}：${mm}：${ss}`;
 
         const delay = 1000 - (Date.now() % 1000);
         setTimeout(() => this.updateTime(), delay);
       }
 
-      showTemporaryMessage(text, duration = 5000) {
-        this.messageElement.textContent = text;
-        this.messageElement.classList.remove("hidden");
-        setTimeout(() => {
-          this.messageElement.classList.add("hidden");
-        }, duration);
+      saveOffset(offsetMs) {
+        localStorage.setItem('tz_offset', offsetMs.toString());
+        this.offset = offsetMs;
       }
 
       init() {
         this.updateTime();
         this.applyAntiBurnIn();
         setInterval(() => this.applyAntiBurnIn(), 10000);
-        this.showTemporaryMessage("此時間以本地時間校準");
+
+        // 讓「此時間以本地時間校準」訊息在 5 秒後淡出消失
+        setTimeout(() => {
+          this.messageElement.classList.add('fade-out');
+        }, 5000);
+
+        // 完全消失後隱藏該元素（避免影響排版）
+        setTimeout(() => {
+          this.messageElement.style.display = 'none';
+        }, 6000);
       }
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-      const clock = new LocalClock("time", "message");
+      const clock = new NTPClock("time", "message");
+      if (!localStorage.getItem("tz_offset")) {
+        clock.saveOffset(8 * 60 * 60 * 1000);
+      }
       clock.init();
     });
   </script>
