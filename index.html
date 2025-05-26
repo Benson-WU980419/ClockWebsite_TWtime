@@ -188,6 +188,7 @@
 
                 // 儲存預設訊息顏色
                 this.defaultMessageColor = 'rgba(255, 255, 255, 0.6)';
+                this._messageTimeout = null; // 用於儲存訊息自動清除的 setTimeout ID
 
                 this.battery = null; // 用於儲存 BatteryManager 物件
                 this._batteryListenersSet = false; // 標誌，確保事件監聽器只設定一次
@@ -252,24 +253,45 @@
                     this.chargingIconElement.style.display = 'none'; // 隱藏閃電圖標
                     this.chargingIconElement.style.animation = 'none'; // 停止閃電動畫
 
-                    if (level <= 10) {
+                    if (level <= 20) { // 低電量 (20% 及以下) 直接顯示空電池並變紅色
                         this.faBatteryIcon.classList.add('fa-battery-empty');
                         this.faBatteryIcon.style.color = '#FF3B30'; // 紅色
                         this.batteryTextElement.classList.add('low-battery-text'); // 電量文字也變紅
-                    } else if (level <= 30) {
-                        this.faBatteryIcon.classList.add('fa-battery-quarter');
-                        this.faBatteryIcon.style.color = '#FF3B30'; // 紅色
-                    } else if (level <= 60) {
+                    } else if (level <= 60) { // 中等電量 (20% 以上到 60% 以下)
                         this.faBatteryIcon.classList.add('fa-battery-half');
                         this.faBatteryIcon.style.color = '#FFD200'; // 黃色
-                    } else if (level <= 85) {
+                    } else if (level <= 85) { // 中高電量 (60% 以上到 85% 以下)
                         this.faBatteryIcon.classList.add('fa-battery-three-quarters');
                         this.faBatteryIcon.style.color = '#34C759'; // 綠色
-                    } else { // level > 85
+                    } else { // 高電量 (85% 以上)
                         this.faBatteryIcon.classList.add('fa-battery-full');
                         this.faBatteryIcon.style.color = '#34C759'; // 綠色
                     }
                 }
+            }
+
+            /**
+             * @private
+             * @method _displayTemporaryMessage
+             * @description 在訊息區塊顯示短暫的提示訊息。
+             * @param {string} message - 要顯示的文字訊息。
+             * @param {string} color - 訊息文字的顏色。
+             * @param {number} duration - 訊息顯示的時間，單位毫秒 (預設 4000 毫秒)。
+             */
+            _displayTemporaryMessage(message, color, duration = 5000) {
+                this.messageElement.textContent = message;
+                this.messageElement.style.color = color;
+
+                // 清除任何現有的計時器，避免訊息重疊
+                if (this._messageTimeout) {
+                    clearTimeout(this._messageTimeout);
+                }
+
+                this._messageTimeout = setTimeout(() => {
+                    this.messageElement.textContent = '';
+                    this.messageElement.style.color = this.defaultMessageColor; // 重設回預設顏色
+                    this._messageTimeout = null;
+                }, duration);
             }
 
             /**
@@ -298,11 +320,13 @@
 
                     } catch (error) {
                         console.error('無法獲取電池資訊:', error);
-                        this.batteryTextElement.textContent = '無法獲取';
-                        this.batteryContainer.style.display = 'none'; // 隱藏整個電量容器
+                        // 在訊息區塊顯示錯誤訊息，然後隱藏電池容器
+                        this._displayTemporaryMessage('無法獲取電池資訊', '#FF3B30'); // 紅色
+                        this.batteryContainer.style.display = 'none';
                     }
                 } else {
                     // 瀏覽器不支援電池 API
+                    this._displayTemporaryMessage('無法獲取電池資訊', '#FF3B30'); // 紅色
                     this.batteryContainer.style.display = 'none'; // 隱藏整個電量容器
                 }
             }
@@ -313,6 +337,7 @@
              */
             async startupBatteryAnimation() {
                 if (!('getBattery' in navigator)) {
+                    this._displayTemporaryMessage('無法獲取電池資訊', '#FF3B30'); // 紅色
                     this.batteryContainer.style.display = 'none'; // 如果不支持，則隱藏
                     return;
                 }
@@ -327,7 +352,6 @@
                     // 定義動畫步驟：Font Awesome 圖標和對應顏色
                     const animationSteps = [
                         { icon: 'fa-battery-empty', color: '#FF3B30', threshold: 0 },
-                        { icon: 'fa-battery-quarter', color: '#FF3B30', threshold: 10 }, 
                         { icon: 'fa-battery-half', color: '#FFD200', threshold: 30 },
                         { icon: 'fa-battery-three-quarters', color: '#34C759', threshold: 60 },
                         { icon: 'fa-battery-full', color: '#34C759', threshold: 85 }
@@ -343,22 +367,37 @@
                         }
 
                         // 非充電狀態下的動畫流程
+                        // 如果目標電量是低電量區間 (<= 20) 且我們剛好在動畫的第一步 (空電池)
+                        if (targetLevel <= 20 && currentStepIndex === 0) {
+                            this._applyBatteryState(targetLevel, targetCharging); // 直接應用最終的低電量狀態 (空電池, 紅色)
+                            this.updateBatteryInfo(); // 設定監聽器和最終狀態
+                            return; // 結束動畫
+                        }
+
                         if (currentStepIndex < animationSteps.length) {
                             const step = animationSteps[currentStepIndex];
                             
                             this.faBatteryIcon.className = 'fa-solid ' + step.icon; // 應用當前動畫步驟的圖標
                             this.faBatteryIcon.style.color = step.color; // 應用當前動畫步驟的顏色
 
-                            // 如果當前步驟的電量閾值達到或超過目標電量，則結束動畫
-                            if (step.threshold >= targetLevel) {
-                                this.updateBatteryInfo(); // 設定監聽器和最終準確狀態
-                                return;
-                            }
+                            // 檢查下一個步驟的電量閾值是否已經超過目標電量
+                            const nextStepThreshold = (currentStepIndex + 1 < animationSteps.length) 
+                                ? animationSteps[currentStepIndex + 1].threshold 
+                                : Infinity; // 如果是最後一步，則閾值設為無限大
 
+                            if (nextStepThreshold > targetLevel) {
+                                // 如果下一個步驟就會超過目標電量，表示當前步驟是動畫中最後一個視覺呈現。
+                                // 立即應用最終的、根據實際電量決定的電池狀態，並結束動畫。
+                                this._applyBatteryState(targetLevel, targetCharging);
+                                this.updateBatteryInfo(); // 設定監聽器和最終準確狀態
+                                return; // 結束動畫
+                            }
+                            
                             currentStepIndex++;
                             setTimeout(animateStep, 200); // 延遲 200 毫秒進行下一個步驟
                         } else {
-                            // 動畫已跑完所有步驟（例如電池滿電），設定最終狀態
+                            // 所有動畫步驟已完成（表示電量很高，跑完了所有動畫步驟），應用最終狀態
+                            this._applyBatteryState(targetLevel, targetCharging);
                             this.updateBatteryInfo(); // 設定監聽器和最終準確狀態
                         }
                     };
@@ -367,7 +406,7 @@
 
                 } catch (error) {
                     console.error('電池啟動動畫失敗:', error);
-                    this.batteryTextElement.textContent = '無法獲取';
+                    this._displayTemporaryMessage('無法獲取電池資訊', '#FF3B30'); // 紅色
                     this.batteryContainer.style.display = 'none';
                 }
             }
@@ -382,14 +421,8 @@
                 this.applyScreenProtection();
                 this.startupBatteryAnimation(); // 在初始化時呼叫啟動動畫
                 
-                this.messageElement.textContent = '已校正為臺灣時間'; 
-                this.messageElement.style.color = 'yellowgreen'; 
-
-                // 調整訊息顯示時間為 4 秒
-                setTimeout(() => {
-                    this.messageElement.textContent = '';
-                    this.messageElement.style.color = this.defaultMessageColor;
-                }, 4000); // 訊息顯示 4 秒鐘
+                // 初次顯示校正訊息
+                this._displayTemporaryMessage('已校正為臺灣時間', 'yellowgreen');
 
                 setInterval(() => this.updateTime(), 1000);
                 setInterval(() => this.applyScreenProtection(), 10000); 
