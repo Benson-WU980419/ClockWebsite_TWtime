@@ -1,192 +1,141 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>網頁時鐘</title>
-    <link href="https://fonts.googleapis.com/css2?family=Lobster&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>iPhone 時鐘</title>
+  <link href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&display=swap" rel="stylesheet">
 
-    <meta name="apple-mobile-web-app-capable" content="yes"> <meta name="mobile-web-app-capable" content="yes"> <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"> <meta name="apple-mobile-web-app-title" content="iPhone 時鐘"> <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/Benson-WU980419/ClockWebsite_TWtime/refs/heads/main/clockwebsite_twtime_icon.png">
-    <link rel="icon" href="https://raw.githubusercontent.com/Benson-WU980419/ClockWebsite_TWtime/refs/heads/main/clockwebsite_twtime_icon.png" type="image/png">
+  <!-- PWA & ICON 支援 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="時鐘">
+  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/Benson-WU980419/ClockWebsite_TWtime/refs/heads/main/clockwebsite_twtime_icon.png">
+  <link rel="icon" href="https://raw.githubusercontent.com/Benson-WU980419/ClockWebsite_TWtime/refs/heads/main/clockwebsite_twtime_icon.png" type="image/png">
 
-    <style>
-        /* 整體頁面樣式 */
-        body {
-            background-color: #000; /* 純黑色背景，適合深色模式 */
-            color: #FFF; /* 白色文字 (主要用於校正訊息，時間顏色會被覆蓋) */
-            font-family: 'Lobster', cursive; /* 頁面主要字體仍使用 Lobster，營造整體風格 */
-            font-weight: normal; /* Lobster 字體本身就較粗，不需要額外設定 bold */
-            display: flex; /* 使用 Flexbox 讓內容居中 */
-            flex-direction: column; /* 垂直排列時間和訊息 */
-            justify-content: center; /* 垂直居中 */
-            align-items: center; /* 水平居中 */
-            height: 100vh; /* 佔滿整個視口高度 */
-            margin: 0; /* 移除預設外邊距 */
-            overflow: hidden; /* 防止頁面出現滾動條 */
-            /* 防止使用者選取文字，提升作為時鐘的體驗 */
-            user-select: none;
-            -webkit-user-select: none; /* 針對 Safari 瀏覽器 */
-            -moz-user-select: none; /* 針對 Firefox 瀏覽器 */
-            -ms-user-select: none; /* 針對 IE/Edge 瀏覽器 */
-            /* 針對 iOS 設備的安全區域，確保內容不會被瀏海或底部條遮擋 */
-            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-        }
+  <style>
+    body {
+      background-color: black;
+      color: white;
+      font-family: 'Major Mono Display', monospace;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
+      user-select: none;
+      padding: env(safe-area-inset);
+    }
 
-        /* 時間顯示區塊樣式 */
-        #time {
-            /* 字體大小根據視口寬度自動調整，確保不超出螢幕且不換行 */
-            font-size: 15vw; 
-            text-align: center; /* 文字居中 */
-            /* 調整字體間距以適應 Major Mono Display 的風格 */
-            letter-spacing: -0.05em; 
-            
-            /* 輝光管風格顏色和發光效果 */
-            color: #FF8C00; /* 輝光管的橙紅色 */
-            text-shadow: 
-                0 0 5px rgba(255, 140, 0, 0.8),   /* 較近的柔和光暈 */
-                0 0 15px rgba(255, 140, 0, 0.6),  /* 中等範圍的光暈 */
-                0 0 30px rgba(255, 140, 0, 0.4);  /* 較遠的擴散光暈 */
-            
-            position: relative; /* 允許使用 transform 進行定位偏移 */
-            transition: transform 5s ease-in-out; /* 設置平滑的過渡效果，讓移動不那麼突兀 */
-            line-height: 1; /* 確保行高緊湊，避免多餘的垂直空間 */
-            /* 使用 Major Mono Display 作為時間數字字體，並提供通用等寬字體作為備用 */
-            font-family: 'Major Mono Display', monospace; 
-            white-space: nowrap; /* 防止時間顯示換行 */
-        }
+    #time {
+      font-size: 15vw;
+      text-align: center;
+      color: #FF8C00;
+      text-shadow: 0 0 5px rgba(255, 140, 0, 0.8), 0 0 15px rgba(255, 140, 0, 0.6), 0 0 30px rgba(255, 140, 0, 0.4);
+      transition: transform 5s ease-in-out;
+      line-height: 1;
+      white-space: nowrap;
+    }
 
-        /* 校正訊息區塊樣式 - 位於時間下方 */
-        #calibration-message {
-            font-size: 3.5vw; /* 稍微增大校正訊息字體 */
-            color: rgba(255, 255, 255, 0.6); /* 預設為淡白色 */
-            margin-top: 3vh; /* 增加與時間顯示的間距 */
-            text-align: center;
-            font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif;
-            font-weight: normal;
-            min-height: 1em; /* 確保即使沒有內容也佔據空間，避免佈局跳動 */
-        }
-
-        /* 淡入動畫 */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-    </style>
+    #message {
+      font-size: 3.5vw;
+      color: rgba(255, 255, 255, 0.6);
+      margin-top: 3vh;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
-    <div id="time"></div>
-    
-    <div id="calibration-message"></div> <script>
-        /**
-         * @class Clock
-         * @description 管理時鐘的顯示、螢幕保護、時間計算邏輯。
-         * 此版本僅使用本地裝置時間，並強制顯示為台灣時區 (UTC+8)。
-         */
-        class Clock {
-            /**
-             * @constructor
-             * @param {string} timeElementId - 顯示時間的 DOM 元素 ID。
-             * @param {string} messageElementId - 顯示校正訊息的 DOM 元素 ID。
-             */
-            constructor(timeElementId, messageElementId) {
-                this.timeElement = document.getElementById(timeElementId);
-                this.messageElement = document.getElementById(messageElementId);
+  <div id="time"></div>
+  <div id="message"></div>
 
-                // 預設調快一秒的固定偏移量 (毫秒)
-                this.desiredInitialFastForward = 0; 
+  <script>
+    class NTPClock {
+      constructor(timeId, messageId) {
+        this.timeElement = document.getElementById(timeId);
+        this.messageElement = document.getElementById(messageId);
 
-                // 台灣時區 (UTC+8) 相對於 UTC 的毫秒偏移量
-                this.taiwanUtcOffsetMs = 8 * 60 * 60 * 1000; 
+        // 台灣預設時區偏移（UTC+8 小時，單位為毫秒）
+        this.defaultOffset = 8 * 60 * 60 * 1000;
 
-                // 儲存預設訊息顏色
-                this.defaultMessageColor = 'rgba(255, 255, 255, 0.6)';
-                this._messageTimeout = null; // 用於儲存訊息自動清除的 setTimeout ID
-            }
+        // 實際偏移會儲存在 localStorage
+        this.offset = parseInt(localStorage.getItem('tz_offset')) || this.defaultOffset;
 
-            /**
-             * @method updateTime
-             * @description 更新時間顯示，每秒執行一次。
-             * 顯示的時間是基於本地裝置的 UTC 時間，加上台灣時區的偏移量，並預設調快一秒。
-             */
-            updateTime() {
-                let currentUtcMs = Date.now();
-                let taiwanTimestampMs = currentUtcMs + this.taiwanUtcOffsetMs;
-                let synchronizedTimestamp = taiwanTimestampMs + this.desiredInitialFastForward; 
-                
-                const synchronizedTime = new Date(synchronizedTimestamp);
+        // NTP 校正時的與系統時間差（單位毫秒）
+        this.ntpDelta = 0;
+      }
 
-                let hours = synchronizedTime.getUTCHours();
-                let minutes = synchronizedTime.getUTCMinutes();
-                let seconds = synchronizedTime.getUTCSeconds();
+      async fetchNTPTime() {
+        try {
+          const response = await fetch("https://worldtimeapi.org/api/timezone/Asia/Taipei", { cache: 'no-store' });
+          const data = await response.json();
+          const serverTime = new Date(data.datetime).getTime();
+          const localTime = Date.now();
+          this.ntpDelta = serverTime - localTime;
 
-                hours = hours < 10 ? '0' + hours : hours;
-                minutes = minutes < 10 ? '0' + minutes : minutes;
-                seconds = seconds < 10 ? '0' + seconds : seconds;
-
-                this.timeElement.textContent = `${hours}：${minutes}：${seconds}`;
-            }
-
-            /**
-             * @method applyScreenProtection
-             * @description 輕微移動時間顯示的位置，以防止螢幕燒屏。
-             */
-            applyScreenProtection() {
-                const offsetX = (Math.random() * 2 - 1) * 1.5; 
-                const offsetY = (Math.random() * 2 - 1) * 1.5; 
-
-                this.timeElement.style.transform = `translate(${offsetX}vw, ${offsetY}vh)`;
-            }
-
-            /**
-             * @private
-             * @method _displayTemporaryMessage
-             * @description 在訊息區塊顯示短暫的提示訊息。
-             * @param {string} message - 要顯示的文字訊息。
-             * @param {string} color - 訊息文字的顏色。
-             * @param {number} duration - 訊息顯示的時間，單位毫秒 (預設 5000 毫秒)。
-             */
-            _displayTemporaryMessage(message, color, duration = 5000) {
-                this.messageElement.textContent = message;
-                this.messageElement.style.color = color;
-
-                // 清除任何現有的計時器，避免訊息重疊
-                if (this._messageTimeout) {
-                    clearTimeout(this._messageTimeout);
-                }
-
-                this._messageTimeout = setTimeout(() => {
-                    this.messageElement.textContent = '';
-                    this.messageElement.style.color = this.defaultMessageColor; // 重設回預設顏色
-                    this._messageTimeout = null;
-                }, duration);
-            }
-
-            /**
-             * @method init
-             * @description 初始化時鐘功能，設定所有定時器。
-             * 此版本不進行線上校準，僅顯示本地台灣時間。
-             */
-            init() {
-                this.updateTime();
-                this.applyScreenProtection();
-
-                // 初次顯示校正訊息
-                this._displayTemporaryMessage('已校正為臺灣時間', 'yellowgreen');
-
-                setInterval(() => this.updateTime(), 1000);
-                setInterval(() => this.applyScreenProtection(), 10000); 
-            }
+          this.showMessage("已從 NTP 校準臺灣時間", "lightgreen");
+        } catch (e) {
+          this.showMessage("⚠ 無法從 NTP 同步時間", "orange");
         }
+      }
 
-        // 頁面載入完成後，實例化 Clock 類別並初始化時鐘功能
-        document.addEventListener('DOMContentLoaded', () => {
-            const myClock = new Clock(
-                'time', 
-                'calibration-message'
-            );
-            myClock.init();
-        });
-    </script>
+      showMessage(text, color = 'white', duration = 5000) {
+        this.messageElement.textContent = text;
+        this.messageElement.style.color = color;
+        if (this._timeout) clearTimeout(this._timeout);
+        this._timeout = setTimeout(() => {
+          this.messageElement.textContent = '';
+        }, duration);
+      }
+
+      applyAntiBurnIn() {
+        const dx = (Math.random() * 2 - 1) * 1.5;
+        const dy = (Math.random() * 2 - 1) * 1.5;
+        this.timeElement.style.transform = `translate(${dx}vw, ${dy}vh)`;
+      }
+
+      updateTime() {
+        const now = Date.now() + this.ntpDelta + this.offset;
+        const date = new Date(now);
+
+        // 24 小時制強制格式化
+        const hh = date.getUTCHours().toString().padStart(2, '0');
+        const mm = date.getUTCMinutes().toString().padStart(2, '0');
+        const ss = date.getUTCSeconds().toString().padStart(2, '0');
+
+        this.timeElement.textContent = `${hh}：${mm}：${ss}`;
+
+        // 每秒精準重算，避免 setInterval 累積誤差
+        const delay = 1000 - (Date.now() % 1000);
+        setTimeout(() => this.updateTime(), delay);
+      }
+
+      saveOffset(offsetMs) {
+        localStorage.setItem('tz_offset', offsetMs.toString());
+        this.offset = offsetMs;
+      }
+
+      async init() {
+        await this.fetchNTPTime(); // 初次載入時 NTP 校準
+        this.updateTime();
+        this.applyAntiBurnIn();
+        setInterval(() => this.applyAntiBurnIn(), 10000); // 每 10 秒移動位置
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const clock = new NTPClock("time", "message");
+
+      // 初次載入設定偏移為 UTC+8（台灣時間），可自訂
+      if (!localStorage.getItem("tz_offset")) {
+        clock.saveOffset(8 * 60 * 60 * 1000);
+      }
+
+      clock.init();
+    });
+  </script>
 </body>
 </html>
