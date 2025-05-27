@@ -8,6 +8,11 @@
   "icons": [
     {
       "src": "https://github.com/wubenson0419/ClockWebsite_TWtime/blob/main/iPhoneClock_04_19.png?raw=true",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://github.com/wubenson0419/ClockWebsite_TWtime/blob/main/iPhoneClock_04_19.png?raw=true",
       "sizes": "512x512",
       "type": "image/png"
     }
