@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>iPhone 時鐘</title>
-  <link href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&display=swap" rel="stylesheet">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&display=swap">
   <style>
-    /* ── 基礎樣式 ── */
     body {
       margin: 0;
       height: 100vh;
@@ -18,12 +18,9 @@
       font-family: 'Major Mono Display', monospace;
       user-select: none;
     }
-
-    /* ── 時間顯示 ── */
     #time {
       position: absolute;
       top: 50%; left: 50%;
-      /* 初始置中，後續合併偏移 */
       transform: translate3d(-50%, -50%, 0);
       font-size: 15vw;
       line-height: 1;
@@ -37,18 +34,19 @@
       will-change: transform;
       transition: transform 5s ease-in-out;
     }
-
-    /* ── 校準訊息 ── */
     #message {
       position: absolute;
-      bottom: 4vh;
-      width: 100%;
-      text-align: center;
+      top: calc(50% + 10vw);
+      left: 50%;
+      transform: translateX(-50%);
       font-size: 3.5vw;
-      color: rgba(255,255,255,0.6);
+      color: #ADFF2F;
+      text-align: center;
       transition: opacity 1s ease;
     }
-    .fade-out { opacity: 0; }
+    .fade-out {
+      opacity: 0;
+    }
   </style>
 </head>
 <body>
@@ -57,63 +55,60 @@
 
   <script>
     class NTPClock {
-      // 常數
-      OFFSET_DEFAULT = 8 * 3600 * 1000;      // 預設時區偏移（ms）
-      BURNIN_DELTA = 1.5;                    // 偏移強度（vw/vh）
-      BURNIN_INTERVAL = 10000;               // 防烙印更新間隔（ms）
-      MSG_FADE_DELAY = 5000;                 // 訊息淡出前等待（ms）
-      MSG_REMOVE_DELAY = 6000;               // 訊息完全移除（ms）
-
       constructor(timeId, msgId) {
-        this.$time    = document.getElementById(timeId);
-        this.$message = document.getElementById(msgId);
-        this.offset   = parseInt(localStorage.getItem('tz_offset')) || this.OFFSET_DEFAULT;
+        this.$time = document.getElementById(timeId);
+        this.$msg  = document.getElementById(msgId);
+        this.tzOffset = parseInt(localStorage.getItem('tz_offset')) || this.DEFAULT_OFFSET;
         this.ntpDelta = 0;
       }
 
-      // 計算並套用 burn‑in 偏移
-      applyAntiBurnIn() {
-        const dx = (Math.random() * 2 - 1) * this.BURNIN_DELTA;
-        const dy = (Math.random() * 2 - 1) * this.BURNIN_DELTA;
-        // 合併置中 + 偏移
-        this.$time.style.transform = `translate3d(calc(-50% + ${dx}vw), calc(-50% + ${dy}vh), 0)`;
+      DEFAULT_OFFSET    = 8 * 3600 * 1000;
+      BURNIN_DISTANCE   = 1.5;
+      BURNIN_INTERVAL   = 10000;
+      MSG_FADE_DELAY    = 5000;
+      MSG_REMOVE_DELAY  = 6000;
+
+      init() {
+        this.saveOffsetIfNotSet();
+        this.updateTime();
+        this.applyBurnInShift();
+        this.burninTimer = setInterval(() => this.applyBurnInShift(), this.BURNIN_INTERVAL);
+        setTimeout(() => this.$msg.classList.add('fade-out'), this.MSG_FADE_DELAY);
+        setTimeout(() => this.$msg.remove(), this.MSG_REMOVE_DELAY);
       }
 
-      // 更新畫面時間，並用 requestAnimationFrame 精準對齊 1 秒
-      updateTime = () => {
-        const nowMs = Date.now() + this.ntpDelta + this.offset;
-        const d     = new Date(nowMs);
-        const hh    = d.getUTCHours().toString().padStart(2,'0');
-        const mm    = d.getUTCMinutes().toString().padStart(2,'0');
-        const ss    = d.getUTCSeconds().toString().padStart(2,'0');
-        this.$time.textContent = `${hh}：${mm}：${ss}`;
-
-        // 下一次呼叫對齊至下一整秒
-        const drift = nowMs % 1000;
-        setTimeout(() => requestAnimationFrame(this.updateTime), 1000 - drift);
-      }
-
-      // 如果沒有設定過 offset，儲存預設
-      ensureOffset() {
+      saveOffsetIfNotSet() {
         if (!localStorage.getItem('tz_offset')) {
-          localStorage.setItem('tz_offset', this.OFFSET_DEFAULT);
+          localStorage.setItem('tz_offset', this.DEFAULT_OFFSET);
         }
       }
 
-      init() {
-        this.ensureOffset();
-        this.updateTime();
-        this.applyAntiBurnIn();
-        // 定期做防烙印偏移
-        this.burninTimer = setInterval(() => this.applyAntiBurnIn(), this.BURNIN_INTERVAL);
-        // 訊息淡出與移除
-        setTimeout(() => this.$message.classList.add('fade-out'), this.MSG_FADE_DELAY);
-        setTimeout(() => this.$message.remove(), this.MSG_REMOVE_DELAY);
+      applyBurnInShift() {
+        const dx = (Math.random() * 2 - 1) * this.BURNIN_DISTANCE;
+        const dy = (Math.random() * 2 - 1) * this.BURNIN_DISTANCE;
+        this.$time.style.transform = `translate3d(calc(-50% + ${dx}vw), calc(-50% + ${dy}vh), 0)`;
+      }
+
+      updateTime = () => {
+        const now = Date.now() + this.ntpDelta + this.tzOffset;
+        const d   = new Date(now);
+        const hh  = d.getUTCHours().toString().padStart(2, '0');
+        const mm  = d.getUTCMinutes().toString().padStart(2, '0');
+        const ss  = d.getUTCSeconds().toString().padStart(2, '0');
+        this.$time.textContent = `${hh}：${mm}：${ss}`;
+        const drift = now % 1000;
+        setTimeout(() => requestAnimationFrame(this.updateTime), 1000 - drift);
       }
     }
 
+    // 啟動時鐘
     document.addEventListener('DOMContentLoaded', () => {
-      new NTPClock('time','message').init();
+      new NTPClock('time', 'message').init();
+
+      // 註冊 service worker
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(err => console.error('SW 註冊失敗:', err));
+      }
     });
   </script>
 </body>
