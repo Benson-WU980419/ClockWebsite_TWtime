@@ -4,35 +4,49 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>iPhone 時鐘</title>
-  <link rel="manifest" href="manifest.json">
+
+  <!-- 字體 -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&display=swap">
-  <!-- 分頁圖標（favicon） -->
+
+  <!-- Favicon 分頁圖示 -->
   <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/wubenson0419/ClockWebsite_TWtime/refs/heads/main/clockwebsite_twtime_icon.png">
 
-  <!-- PWA manifest -->
-  <link rel="manifest" href="manifest.json">
+  <!-- PWA 設定 -->
+  <link rel="manifest" href="manifest.json" type="application/manifest+json" crossorigin="use-credentials">
 
-  <!-- iOS 加入主畫面圖示 -->
+  <!-- iOS 主畫面圖示 -->
   <link rel="apple-touch-icon" href="https://github.com/wubenson0419/ClockWebsite_TWtime/blob/main/iPhoneClock_04_19.png?raw=true">
-
-  <!-- iOS 啟動樣式 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#000000" />
+  <meta name="background-color" content="#000000" />
+
   <style>
-    body {
+    /* ==== 全畫面純黑背景設定 ==== */
+    html, body {
       margin: 0;
-      height: 100vh;
-      overflow: hidden;
-      padding: env(safe-area-inset);
-      position: relative;
+      padding: 0;
+      width: 100%;
+      height: 100%;
       background: #000;
       color: #fff;
       font-family: 'Major Mono Display', monospace;
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
       user-select: none;
     }
+
+    body {
+      padding: env(safe-area-inset);
+      position: relative;
+    }
+
+    /* ==== 中央時間顯示 ==== */
     #time {
       position: absolute;
-      top: 50%; left: 50%;
+      top: 50%;
+      left: 50%;
       transform: translate3d(-50%, -50%, 0);
       font-size: 15vw;
       line-height: 1;
@@ -46,6 +60,8 @@
       will-change: transform;
       transition: transform 5s ease-in-out;
     }
+
+    /* ==== 校準成功提示訊息 ==== */
     #message {
       position: absolute;
       top: calc(50% + 10vw);
@@ -56,11 +72,13 @@
       text-align: center;
       transition: opacity 1s ease;
     }
+
     .fade-out {
       opacity: 0;
     }
   </style>
 </head>
+
 <body>
   <div id="time"></div>
   <div id="message">以本地時間校準成功</div>
@@ -69,16 +87,16 @@
     class NTPClock {
       constructor(timeId, msgId) {
         this.$time = document.getElementById(timeId);
-        this.$msg  = document.getElementById(msgId);
+        this.$msg = document.getElementById(msgId);
         this.tzOffset = parseInt(localStorage.getItem('tz_offset')) || this.DEFAULT_OFFSET;
         this.ntpDelta = 0;
       }
 
-      DEFAULT_OFFSET    = 8 * 3600 * 1000;
-      BURNIN_DISTANCE   = 1.5;
-      BURNIN_INTERVAL   = 10000;
-      MSG_FADE_DELAY    = 5000;
-      MSG_REMOVE_DELAY  = 6000;
+      DEFAULT_OFFSET = 8 * 3600 * 1000;   // UTC+8 時區預設
+      BURNIN_DISTANCE = 1.5;             // 防烙印偏移量
+      BURNIN_INTERVAL = 10000;           // 每 10 秒做一次偏移
+      MSG_FADE_DELAY = 5000;             // 訊息淡出延遲
+      MSG_REMOVE_DELAY = 6000;           // 訊息移除延遲
 
       init() {
         this.saveOffsetIfNotSet();
@@ -103,21 +121,20 @@
 
       updateTime = () => {
         const now = Date.now() + this.ntpDelta + this.tzOffset;
-        const d   = new Date(now);
-        const hh  = d.getUTCHours().toString().padStart(2, '0');
-        const mm  = d.getUTCMinutes().toString().padStart(2, '0');
-        const ss  = d.getUTCSeconds().toString().padStart(2, '0');
+        const d = new Date(now);
+        const hh = d.getUTCHours().toString().padStart(2, '0');
+        const mm = d.getUTCMinutes().toString().padStart(2, '0');
+        const ss = d.getUTCSeconds().toString().padStart(2, '0');
         this.$time.textContent = `${hh}：${mm}：${ss}`;
         const drift = now % 1000;
         setTimeout(() => requestAnimationFrame(this.updateTime), 1000 - drift);
       }
     }
 
-    // 啟動時鐘
     document.addEventListener('DOMContentLoaded', () => {
       new NTPClock('time', 'message').init();
 
-      // 註冊 service worker
+      // PWA: 註冊 Service Worker
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js').catch(err => console.error('SW 註冊失敗:', err));
       }
