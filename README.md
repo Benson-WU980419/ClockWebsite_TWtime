@@ -1,2 +1,2 @@
-# ClockWebsite_TWtime
-一個台灣時區的好看時鐘
+# ClockWebsite
+一個好看的網頁時鐘
